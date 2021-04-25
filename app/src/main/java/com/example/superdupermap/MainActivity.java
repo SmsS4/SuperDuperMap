@@ -1,5 +1,9 @@
 package com.example.superdupermap;
 
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.room.Room;
+
+import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -10,6 +14,9 @@ import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
 import com.mapbox.mapboxsdk.maps.Style;
+
+import com.example.superdupermap.database.AppDatabase;
+import com.example.superdupermap.database.Bookmark;
 
 public class MainActivity extends AppCompatActivity {
     private MapView mapView;
@@ -82,5 +89,11 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         mapView.onDestroy();
+
+        Intent intent = new Intent(MainActivity.this, BookmarkActivity.class);
+//        intent.putExtra("id", coin);
+        startActivity(intent);
+
+
     }
 }

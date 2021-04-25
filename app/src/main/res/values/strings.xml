@@ -1,4 +1,13 @@
 <resources>
     <string name="app_name">SuperDuperMap</string>
     <string name="mapbox_access_token">pk.eyJ1IjoicmVuZXc1MjAwOCIsImEiOiJja253OXVlZWMwdW9oMm5wczZsa2Y1dHdiIn0.JFq0xZZo9PeQVYupemGBog</string>
+    <string name="title_activity_main2555">MainActivity2555</string>
+    <!-- Strings used for fragments for navigation -->
+    <string name="first_fragment_label">First Fragment</string>
+    <string name="second_fragment_label">Second Fragment</string>
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+
+    <string name="hello_first_fragment">Hello first fragment</string>
+    <string name="hello_second_fragment">Hello second fragment. Arg: %1$s</string>
 </resources>
