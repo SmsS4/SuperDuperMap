@@ -13,11 +13,17 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.SuperDuperMap">
         <activity android:name=".search.SearchActivity"></activity>
+        <activity android:name=".setttings.SettingsActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".MainActivity2555"
             android:label="@string/title_activity_main2555"
             android:theme="@style/Theme.SuperDuperMap.NoActionBar" />
-        <activity android:name=".BookmarkActivity" />
+        <activity android:name=".bookmark.BookmarkActivity" />
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
