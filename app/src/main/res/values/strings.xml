@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">SuperDuperMap</string>
+    <string name="mapbox_access_token">pk.eyJ1IjoicmVuZXc1MjAwOCIsImEiOiJja253OXVlZWMwdW9oMm5wczZsa2Y1dHdiIn0.JFq0xZZo9PeQVYupemGBog</string>
 </resources>
