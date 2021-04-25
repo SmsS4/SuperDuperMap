@@ -5,22 +5,66 @@ import android.os.Bundle;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 
+import com.example.superdupermap.bookmark.BookmarkActivity;
+import com.example.superdupermap.setttings.ConfigStorage;
+import com.example.superdupermap.setttings.SettingsActivity;
+import com.example.superdupermap.database.AppDatabase;
+import com.example.superdupermap.database.Config;
 import com.mapbox.mapboxsdk.Mapbox;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
 import com.mapbox.mapboxsdk.maps.Style;
 
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
 public class MainActivity extends AppCompatActivity {
     private MapView mapView;
+    private AppDatabase db;
+    private ThreadPoolExecutor threadPoolExecutor;
+
+
+    public void initSmsS() {
+        LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
+        threadPoolExecutor = new ThreadPoolExecutor(
+                0, 2, 15, TimeUnit.MINUTES, queue
+        );
+        threadPoolExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                db = AppDatabase.getDatabase(getApplicationContext());
+                if (db.configDao().getAll().size() == 0) {
+                    db.configDao().insert(
+                            new Config(false)
+                    );
+
+                }
+                ConfigStorage.darkMode = db.configDao().getDarkMode();
+            }
+        });
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (ConfigStorage.darkMode) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+        } else {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        }
 
+
+        initSmsS();
+
+//        Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
+//        startActivity(intent);
         Intent intent = new Intent(MainActivity.this, BookmarkActivity.class);
         startActivity(intent);
+
 
         Mapbox.getInstance(this, getString(R.string.mapbox_access_token));
 
