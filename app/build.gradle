@@ -2,6 +2,10 @@ plugins {
     id 'com.android.application'
 }
 
+repositories {
+    mavenCentral()
+}
+
 android {
     compileSdkVersion 30
     buildToolsVersion "30.0.3"
@@ -41,13 +45,23 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
 
     implementation 'com.mapbox.mapboxsdk:mapbox-android-sdk:9.6.1'
+    implementation 'com.mapbox.mapboxsdk:mapbox-android-plugin-places-v9:0.12.0'
     annotationProcessor 'androidx.room:room-compiler:2.3.0'
 }
 
 configurations.all
         {
             resolutionStrategy.eachDependency { details ->
-                if (details.requested.name.contains('lifecycle-')) {
+                if (details.requested.name == ('lifecycle-common')) {
+                    details.useVersion "2.3.0"
+                }
+                if (details.requested.name == ('lifecycle-livedata-core')) {
+                    details.useVersion "2.3.0"
+                }
+                if (details.requested.name == ('lifecycle-viewmodel')) {
+                    details.useVersion "2.3.0"
+                }
+                if (details.requested.name == ('lifecycle-viewmodel-savedstate')) {
                     details.useVersion "2.3.0"
                 }
                 if (details.requested.name.contains('core-runtime')) {
@@ -67,6 +81,9 @@ configurations.all
                 }
                 if (details.requested.name == 'activity') {
                     details.useVersion "1.0.0"
+                }
+                if (details.requested.name == 'legacy-support-v4') {
+                    details.useVersion "1.0.0-alpha1"
                 }
             }
         }

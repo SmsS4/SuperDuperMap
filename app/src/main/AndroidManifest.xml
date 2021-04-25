@@ -12,6 +12,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.SuperDuperMap">
+        <activity android:name=".search.SearchActivity"></activity>
         <activity
             android:name=".MainActivity2555"
             android:label="@string/title_activity_main2555"
