@@ -10,4 +10,6 @@
 
     <string name="hello_first_fragment">Hello first fragment</string>
     <string name="hello_second_fragment">Hello second fragment. Arg: %1$s</string>
+    <string name="user_location_permission_not_granted">Location permission not granted... :(</string>
+    <string name="user_location_permission_explanation">Need location permission to show your location.</string>
 </resources>
