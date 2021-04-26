@@ -15,9 +15,17 @@
         tools:layout_editor_absoluteY="101dp">
 
         <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/searchBoxReal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/search" />
+
+        <ImageView
+            android:id="@+id/mic"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            app:srcCompat="@android:drawable/ic_btn_speak_now" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <FrameLayout
