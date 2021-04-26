@@ -1,13 +1,20 @@
 package com.example.superdupermap;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -17,9 +24,12 @@ import androidx.core.app.ActivityCompat;
 
 import com.example.superdupermap.bookmark.BookmarkActivity;
 import com.example.superdupermap.database.AppDatabase;
+import com.example.superdupermap.database.Bookmark;
 import com.example.superdupermap.database.Config;
 import com.example.superdupermap.setttings.ConfigStorage;
 import com.example.superdupermap.search.SearchActivity;
+import com.example.superdupermap.setttings.SettingsActivity;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.mapbox.android.core.permissions.PermissionsListener;
 import com.mapbox.android.core.permissions.PermissionsManager;
@@ -66,30 +76,45 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
     }
+
     private PermissionsManager permissionsManager;
     private MapboxMap mapboxMap;
     private LocationManager locationManager;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    public void pre() {
         if (ConfigStorage.darkMode) {
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
         } else {
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
         }
+        setContentView(R.layout.activity_main);
 
+        Activity from = MainActivity.this;
+        findViewById(R.id.bookmark_nav).setOnClickListener(v -> {
+            System.out.println("bookmark_nav called on Main");
+            finish();
+            startActivity(new Intent(from, BookmarkActivity.class).addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION));
+        });
 
+        ColorMatrix matrix = new ColorMatrix();
+        matrix.setSaturation(0);
+        ColorMatrixColorFilter filter = new ColorMatrixColorFilter(matrix);
+        ((ImageView) findViewById(R.id.map_nav)).setColorFilter(filter);
+
+        findViewById(R.id.setting_nav).setOnClickListener(v -> {
+            finish();
+            startActivity(new Intent(from, SettingsActivity.class).addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION));
+        });
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         initSmsS();
-
-//        Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
-//        startActivity(intent);
-        Intent intent = new Intent(MainActivity.this, BookmarkActivity.class);
-        startActivity(intent);
-
         Mapbox.getInstance(this, getString(R.string.mapbox_access_token));
 
-        setContentView(R.layout.activity_main);
+        pre();
+
 
         mapView = (MapView) findViewById(R.id.mapView);
         mapView.onCreate(savedInstanceState);
