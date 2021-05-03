@@ -1,5 +1,6 @@
 package com.example.superdupermap.search;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.speech.RecognizerIntent;
@@ -107,12 +108,16 @@ public class SearchActivity extends AppCompatActivity {
                         new RecyclerItemClickListener.OnItemClickListener() {
                             @Override
                             public void onItemClick(View view, int position) {
+                                LatLng location = searchResults.get(position).getLocation();
+                                Intent data = new Intent();
+                                data.putExtra("lat", location.getLatitude());
+                                data.putExtra("lng", location.getLongitude());
+                                setResult(Activity.RESULT_OK, data);
+                                finish();
                             }
 
                             @Override
                             public void onLongItemClick(View view, int position) {
-                                LatLng location = searchResults.get(position).getLocation();
-
                             }
                         }
                 )

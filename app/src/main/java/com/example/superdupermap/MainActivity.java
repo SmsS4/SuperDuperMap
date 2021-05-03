@@ -2,7 +2,9 @@ package com.example.superdupermap;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.ColorMatrix;
@@ -10,7 +12,9 @@ import android.graphics.ColorMatrixColorFilter;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.text.InputType;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
 
@@ -21,6 +25,7 @@ import androidx.core.app.ActivityCompat;
 
 import com.example.superdupermap.bookmark.BookmarkActivity;
 import com.example.superdupermap.database.AppDatabase;
+import com.example.superdupermap.database.Bookmark;
 import com.example.superdupermap.database.Config;
 import com.example.superdupermap.search.SearchActivity;
 import com.example.superdupermap.setttings.ConfigStorage;
@@ -42,11 +47,13 @@ import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
 import com.mapbox.mapboxsdk.maps.Style;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, PermissionsListener {
+    private static final int SEARCH_REQUEST_CODE = 0;
     private MapView mapView;
     private AppDatabase db;
     private ThreadPoolExecutor threadPoolExecutor;
@@ -105,9 +112,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             @Override
             public void onFocusChange(View v, boolean hasFocus) {
                 if (hasFocus) {
-                    finish();
-                    startActivity(new Intent(from, SearchActivity.class)
-                            .addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION));
+                    v.clearFocus();
+                    startActivityForResult(new Intent(from, SearchActivity.class)
+                            .addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION), 0);
                 }
             }
         });
@@ -142,19 +149,86 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
                 double latitude = location.getLatitude(),
                         longitude = location.getLongitude();
-                CameraPosition position = new CameraPosition.Builder()
-                        .target(new LatLng(latitude, longitude))
-                        .zoom(15)
-                        .build();
-                mapboxMap.animateCamera(CameraUpdateFactory
-                        .newCameraPosition(position), 3000);
+                gotoPosition(new LatLng(latitude, longitude));
             }
         });
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == SEARCH_REQUEST_CODE) {
+            if (resultCode != RESULT_OK)
+                return;
+            LatLng location = mapboxMap.getCameraPosition().target;
+            location.setLatitude(data.getDoubleExtra("lat", location.getLatitude()));
+            location.setLongitude(data.getDoubleExtra("lng", location.getLongitude()));
+            gotoPosition(location);
+            dropPin(location);
+            showBookmarkModal(location);
+        }
+        super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    private void gotoPosition(LatLng location) {
+        CameraPosition position = new CameraPosition.Builder()
+                .target(location)
+                .zoom(15)
+                .build();
+        mapboxMap.animateCamera(CameraUpdateFactory
+                .newCameraPosition(position), 3000);
+    }
+
+    private void dropPin(LatLng location) {
+    }
+
+    private void clearPin() {
+    }
+
+    private void showBookmarkModal(LatLng location) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Add bookmark");
+        builder.setMessage(String.format(
+                Locale.getDefault(),
+                "(%.2f, %.2f)",
+                location.getLatitude(),
+                location.getLongitude()
+        ));
+
+        final EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        builder.setView(input);
+
+        builder.setPositiveButton("Save", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                Bookmark bookmark = new Bookmark(
+                        input.getText().toString(),
+                        location.getLatitude(),
+                        location.getLongitude()
+                );
+                threadPoolExecutor.execute(() -> db.bookmarkDao().insert(bookmark));
+                clearPin();
+            }
+        });
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+                clearPin();
+            }
+        });
+
+        builder.show();
+    }
 
     public void onMapReady(@NonNull MapboxMap mapboxMap) {
         MainActivity.this.mapboxMap = mapboxMap;
+        mapboxMap.addOnMapLongClickListener(location -> {
+            gotoPosition(location);
+            dropPin(location);
+            showBookmarkModal(location);
+            return true;
+        });
         mapboxMap.setStyle(Style.MAPBOX_STREETS, new Style.OnStyleLoaded() {
             @Override
             public void onStyleLoaded(@NonNull Style style) {
