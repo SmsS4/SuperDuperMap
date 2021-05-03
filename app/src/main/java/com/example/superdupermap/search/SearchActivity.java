@@ -1,9 +1,13 @@
 package com.example.superdupermap.search;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.speech.RecognizerIntent;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.View;
 import android.widget.EditText;
+import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -11,6 +15,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.superdupermap.R;
+import com.google.android.material.textfield.TextInputEditText;
 import com.mapbox.api.geocoding.v5.MapboxGeocoding;
 import com.mapbox.api.geocoding.v5.models.CarmenFeature;
 import com.mapbox.api.geocoding.v5.models.GeocodingResponse;
@@ -25,6 +30,7 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class SearchActivity extends AppCompatActivity {
+    private static final int SPEECH_REQUEST_CODE = 0;
     private RecyclerView.Adapter adapter;
     private List<SearchResult> searchResults;
     private RecyclerView searchResultsView;
@@ -34,6 +40,8 @@ public class SearchActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_search);
+
+        initVoiceSearch();
 
         initSearchResultsList();
 
@@ -52,6 +60,37 @@ public class SearchActivity extends AppCompatActivity {
                 searchPattern(s.toString());
             }
         });
+
+        initVoiceSearch();
+    }
+
+    private void initVoiceSearch() {
+        /// todo add this feature to bookmark
+        ImageView mic = findViewById(R.id.mic);
+        mic.setOnClickListener(v -> {
+            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                    RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            /// remove this lint for english
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fa");
+
+            startActivityForResult(intent, SPEECH_REQUEST_CODE);
+        });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == SPEECH_REQUEST_CODE) {
+            if (resultCode != RESULT_OK)
+                return;
+            List<String> results = data.getStringArrayListExtra(
+                    RecognizerIntent.EXTRA_RESULTS);
+            String spokenText = results.get(0);
+            // Do something with spokenText.
+            System.out.println(spokenText);
+            ((TextInputEditText) findViewById(R.id.searchTextInput)).setText(spokenText);
+        }
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
     private void initSearchResultsList() {
@@ -62,6 +101,22 @@ public class SearchActivity extends AppCompatActivity {
 
         adapter = new SearchResultListAdapter(searchResults);
         searchResultsView.setAdapter(adapter);
+
+        searchResultsView.addOnItemTouchListener(
+                new RecyclerItemClickListener(this, searchResultsView,
+                        new RecyclerItemClickListener.OnItemClickListener() {
+                            @Override
+                            public void onItemClick(View view, int position) {
+                            }
+
+                            @Override
+                            public void onLongItemClick(View view, int position) {
+                                LatLng location = searchResults.get(position).getLocation();
+
+                            }
+                        }
+                )
+        );
     }
 
     private void searchPattern(String pattern) {
