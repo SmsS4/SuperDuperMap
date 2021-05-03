@@ -12,10 +12,12 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.SuperDuperMap">
-        <activity android:name=".search.SearchActivity"></activity>
+        <activity android:name=".LoadingAcitivty"></activity>
+        <activity android:name=".search.SearchActivity" />
         <activity android:name=".setttings.SettingsActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>

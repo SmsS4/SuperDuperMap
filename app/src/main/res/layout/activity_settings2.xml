@@ -6,22 +6,47 @@
     android:layout_height="match_parent"
     tools:context=".setttings.SettingsActivity">
 
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNavigationViewSettings"
+        android:layout_width="match_parent"
+        android:layout_height="70dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        >
 
+        <include  layout="@layout/bottom_nav_menu"
+            android:id="@+id/id"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginLeft="2sp"
+            android:layout_marginRight="2sp"
+            />
 
-    <Button
-        android:id="@+id/clear_storage"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Clear Storage"
-        tools:layout_editor_absoluteX="46dp"
-        tools:layout_editor_absoluteY="42dp" />
+    </com.google.android.material.bottomnavigation.BottomNavigationView>
 
-    <Switch
-        android:id="@+id/switch1"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Switch"
+    <LinearLayout
+        android:layout_width="345dp"
+        android:layout_height="515dp"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toTopOf="@+id/bottomNavigationViewSettings"
         app:layout_constraintEnd_toEndOf="parent"
-        tools:layout_editor_absoluteY="418dp" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <Button
+            android:id="@+id/clear_storage"
+            android:layout_width="144dp"
+            android:layout_height="65dp"
+            android:hapticFeedbackEnabled="true"
+            android:text="Clear Storage" />
+
+        <Switch
+            android:id="@+id/switch1"
+            android:layout_width="142dp"
+            android:layout_height="57dp"
+            android:layout_marginEnd="64dp"
+            android:layout_marginRight="64dp"
+            android:text="    DarkMode" />
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

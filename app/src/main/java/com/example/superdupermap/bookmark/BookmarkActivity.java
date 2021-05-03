@@ -5,8 +5,12 @@ import androidx.appcompat.app.AppCompatDelegate;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -19,11 +23,15 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
 
+import com.example.superdupermap.MainActivity;
 import com.example.superdupermap.MessageWhat;
 import com.example.superdupermap.R;
 import com.example.superdupermap.database.AppDatabase;
 import com.example.superdupermap.database.Bookmark;
 import com.example.superdupermap.setttings.ConfigStorage;
+import com.example.superdupermap.setttings.SettingsActivity;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -38,7 +46,7 @@ public class BookmarkActivity extends AppCompatActivity {
     private Handler handler;
     private AppDatabase db;
 
-    private EditText searchbar;
+    private TextInputEditText searchbar;
     private RecyclerView recyclerView;
 
     public List<Bookmark> bookmarks = new ArrayList<>();
@@ -72,6 +80,7 @@ public class BookmarkActivity extends AppCompatActivity {
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.setAdapter(new BookmarkAdapter(bookmarks, this));
+
         searchbar = findViewById(R.id.searchbar);
 
         searchbar.addTextChangedListener(new TextWatcher() {
@@ -123,16 +132,37 @@ public class BookmarkActivity extends AppCompatActivity {
         );
     }
 
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    public void pre() {
+        System.out.println("Pre called");
         if (ConfigStorage.darkMode) {
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
         } else {
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
         }
         setContentView(R.layout.activity_bookmark);
+
+        Activity from = BookmarkActivity.this;
+
+        ColorMatrix matrix = new ColorMatrix();
+        matrix.setSaturation(0);
+        ColorMatrixColorFilter filter = new ColorMatrixColorFilter(matrix);
+        ((ImageView) findViewById(R.id.bookmark_nav)).setColorFilter(filter);
+
+        findViewById(R.id.map_nav).setOnClickListener(v -> {
+            finish();
+            startActivity(new Intent(from, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION));
+        });
+
+        findViewById(R.id.setting_nav).setOnClickListener(v -> {
+            finish();
+            startActivity(new Intent(from, SettingsActivity.class).addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION));
+        });
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        pre();
         setFields();
         initThreadPool();
 

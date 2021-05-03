@@ -1,13 +1,21 @@
 package com.example.superdupermap;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.speech.RecognizerIntent;
+import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -17,10 +25,14 @@ import androidx.core.app.ActivityCompat;
 
 import com.example.superdupermap.bookmark.BookmarkActivity;
 import com.example.superdupermap.database.AppDatabase;
+import com.example.superdupermap.database.Bookmark;
 import com.example.superdupermap.database.Config;
 import com.example.superdupermap.setttings.ConfigStorage;
 import com.example.superdupermap.search.SearchActivity;
+import com.example.superdupermap.setttings.SettingsActivity;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.textfield.TextInputEditText;
 import com.mapbox.android.core.permissions.PermissionsListener;
 import com.mapbox.android.core.permissions.PermissionsManager;
 import com.mapbox.mapboxsdk.Mapbox;
@@ -47,7 +59,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private ThreadPoolExecutor threadPoolExecutor;
 
 
-    public void initSmsS() {
+    public void initThreadPool() {
         LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
         threadPoolExecutor = new ThreadPoolExecutor(
                 0, 2, 15, TimeUnit.MINUTES, queue
@@ -66,30 +78,74 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
     }
+
     private PermissionsManager permissionsManager;
     private MapboxMap mapboxMap;
     private LocationManager locationManager;
+    private static final int SPEECH_REQUEST_CODE = 0;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    public void pre() {
         if (ConfigStorage.darkMode) {
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
         } else {
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
         }
+        setContentView(R.layout.activity_main);
 
+        Activity from = MainActivity.this;
+        findViewById(R.id.bookmark_nav).setOnClickListener(v -> {
+            System.out.println("bookmark_nav called on Main");
+            finish();
+            startActivity(new Intent(from, BookmarkActivity.class).addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION));
+        });
 
-        initSmsS();
+        ColorMatrix matrix = new ColorMatrix();
+        matrix.setSaturation(0);
+        ColorMatrixColorFilter filter = new ColorMatrixColorFilter(matrix);
+        ((ImageView) findViewById(R.id.map_nav)).setColorFilter(filter);
 
-//        Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
-//        startActivity(intent);
-        Intent intent = new Intent(MainActivity.this, BookmarkActivity.class);
-        startActivity(intent);
+        findViewById(R.id.setting_nav).setOnClickListener(v -> {
+            finish();
+            startActivity(new Intent(from, SettingsActivity.class).addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION));
+        });
+    }
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode,
+                                    Intent data) {
+        if (requestCode == SPEECH_REQUEST_CODE && resultCode == RESULT_OK) {
+            List<String> results = data.getStringArrayListExtra(
+                    RecognizerIntent.EXTRA_RESULTS);
+            String spokenText = results.get(0);
+            // Do something with spokenText.
+            System.out.println(spokenText);
+            ((TextInputEditText)findViewById(R.id.searchBoxReal)).setText(spokenText);
+        }
+        super.onActivityResult(requestCode, resultCode, data);
+    }
 
+    private void initVoiceSearch(){
+        /// todo add this feature to bookmark
+        ImageView mic = findViewById(R.id.mic);
+        mic.setOnClickListener(v -> {
+            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                    RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            /// remove this lint for english
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fa");
+
+            startActivityForResult(intent, SPEECH_REQUEST_CODE);
+        });
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        initThreadPool();
         Mapbox.getInstance(this, getString(R.string.mapbox_access_token));
 
-        setContentView(R.layout.activity_main);
+        pre();
+
+        initVoiceSearch();
 
         mapView = (MapView) findViewById(R.id.mapView);
         mapView.onCreate(savedInstanceState);
