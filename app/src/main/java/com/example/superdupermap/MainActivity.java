@@ -7,8 +7,11 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
+import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
@@ -22,6 +25,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.example.superdupermap.bookmark.BookmarkActivity;
 import com.example.superdupermap.database.AppDatabase;
@@ -33,6 +37,7 @@ import com.example.superdupermap.setttings.SettingsActivity;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.mapbox.android.core.permissions.PermissionsListener;
 import com.mapbox.android.core.permissions.PermissionsManager;
+import com.mapbox.geojson.Point;
 import com.mapbox.mapboxsdk.Mapbox;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
@@ -45,6 +50,9 @@ import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
 import com.mapbox.mapboxsdk.maps.Style;
+import com.mapbox.mapboxsdk.style.layers.Layer;
+import com.mapbox.mapboxsdk.style.layers.SymbolLayer;
+import com.mapbox.mapboxsdk.style.sources.GeoJsonSource;
 
 import java.util.List;
 import java.util.Locale;
@@ -52,14 +60,24 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import static com.mapbox.mapboxsdk.style.layers.Property.NONE;
+import static com.mapbox.mapboxsdk.style.layers.Property.VISIBLE;
+import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconAllowOverlap;
+import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconIgnorePlacement;
+import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconImage;
+import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.visibility;
+
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, PermissionsListener {
     private static final int SEARCH_REQUEST_CODE = 0;
+    private static final String DROPPED_MARKER_LAYER_ID = "DROPPED_MARKER_LAYER_ID";
     private MapView mapView;
     private AppDatabase db;
     private ThreadPoolExecutor threadPoolExecutor;
     private PermissionsManager permissionsManager;
     private MapboxMap mapboxMap;
     private LocationManager locationManager;
+    private LatLng markerLocation;
+    private Layer droppedMarkerLayer;
 
     public void initThreadPool() {
         LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
@@ -163,10 +181,37 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             location.setLatitude(data.getDoubleExtra("lat", location.getLatitude()));
             location.setLongitude(data.getDoubleExtra("lng", location.getLongitude()));
             gotoPosition(location);
-            dropPin(location);
+            dropMarker(location);
             showBookmarkModal(location);
         }
         super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    private void initDroppedMarker(@NonNull Style loadedMapStyle) {
+        // Add the marker image to map
+//        loadedMapStyle.addImage("dropped-icon-image", BitmapFactory.decodeResource(
+//                getResources(), R.drawable.blue_marker));
+
+        Drawable drawable = ContextCompat.getDrawable(this, R.drawable.blue_marker);
+        assert drawable != null;
+        Bitmap bitmap = Bitmap.createBitmap(
+                drawable.getIntrinsicWidth(),
+                drawable.getIntrinsicHeight(),
+                Bitmap.Config.ARGB_8888
+        );
+        Canvas canvas = new Canvas(bitmap);
+        drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+        drawable.draw(canvas);
+        loadedMapStyle.addImage("dropped-icon-image", bitmap);
+
+        loadedMapStyle.addSource(new GeoJsonSource("dropped-marker-source-id"));
+        loadedMapStyle.addLayer(new SymbolLayer(DROPPED_MARKER_LAYER_ID,
+                "dropped-marker-source-id").withProperties(
+                iconImage("dropped-icon-image"),
+                visibility(NONE),
+                iconAllowOverlap(true),
+                iconIgnorePlacement(true)
+        ));
     }
 
     private void gotoPosition(LatLng location) {
@@ -178,10 +223,33 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 .newCameraPosition(position), 3000);
     }
 
-    private void dropPin(LatLng location) {
+    private void dropMarker(LatLng location) {
+        if (markerLocation != null)
+            clearMarker();
+
+        Style style = mapboxMap.getStyle();
+        if (style == null || style.getLayer(DROPPED_MARKER_LAYER_ID) == null)
+            return;
+        GeoJsonSource source = style.getSourceAs("dropped-marker-source-id");
+        if (source != null) {
+            source.setGeoJson(Point.fromLngLat(location.getLongitude(), location.getLatitude()));
+        }
+        droppedMarkerLayer = style.getLayer(DROPPED_MARKER_LAYER_ID);
+        if (droppedMarkerLayer != null) {
+            droppedMarkerLayer.setProperties(visibility(VISIBLE));
+        }
+        markerLocation = location;
     }
 
-    private void clearPin() {
+    private void clearMarker() {
+        Style style = mapboxMap.getStyle();
+        if (style == null || style.getLayer(DROPPED_MARKER_LAYER_ID) == null)
+            return;
+        droppedMarkerLayer = style.getLayer(DROPPED_MARKER_LAYER_ID);
+        if (droppedMarkerLayer != null) {
+            droppedMarkerLayer.setProperties(visibility(NONE));
+        }
+        markerLocation = null;
     }
 
     private void showBookmarkModal(LatLng location) {
@@ -207,14 +275,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         location.getLongitude()
                 );
                 threadPoolExecutor.execute(() -> db.bookmarkDao().insert(bookmark));
-                clearPin();
+                clearMarker();
             }
         });
         builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 dialog.cancel();
-                clearPin();
+                clearMarker();
             }
         });
 
@@ -225,7 +293,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         MainActivity.this.mapboxMap = mapboxMap;
         mapboxMap.addOnMapLongClickListener(location -> {
             gotoPosition(location);
-            dropPin(location);
+            dropMarker(location);
             showBookmarkModal(location);
             return true;
         });
@@ -233,6 +301,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             @Override
             public void onStyleLoaded(@NonNull Style style) {
                 enableLocationComponent(style);
+                initDroppedMarker(style);
             }
         });
     }
