@@ -7,13 +7,18 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
+import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
@@ -22,6 +27,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.example.superdupermap.bookmark.BookmarkActivity;
 import com.example.superdupermap.database.AppDatabase;
@@ -33,6 +39,7 @@ import com.example.superdupermap.setttings.SettingsActivity;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.mapbox.android.core.permissions.PermissionsListener;
 import com.mapbox.android.core.permissions.PermissionsManager;
+import com.mapbox.geojson.Point;
 import com.mapbox.mapboxsdk.Mapbox;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
@@ -45,6 +52,9 @@ import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
 import com.mapbox.mapboxsdk.maps.Style;
+import com.mapbox.mapboxsdk.style.layers.Layer;
+import com.mapbox.mapboxsdk.style.layers.SymbolLayer;
+import com.mapbox.mapboxsdk.style.sources.GeoJsonSource;
 
 import java.util.List;
 import java.util.Locale;
@@ -52,14 +62,31 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import static com.mapbox.mapboxsdk.style.layers.Property.NONE;
+import static com.mapbox.mapboxsdk.style.layers.Property.VISIBLE;
+import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconAllowOverlap;
+import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconIgnorePlacement;
+import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconImage;
+import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.visibility;
+
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, PermissionsListener {
-    private static final int SEARCH_REQUEST_CODE = 0;
+    public static final int REQUEST_CODE_SEARCH = 0;
+    public static final int REQUEST_CODE_SETTINGS = 1;
+    public static final int REQUEST_CODE_BOOKMARKS = 2;
+    public static final int RESULT_CODE_GOTO_BOOKMARK = 100;
+    public static final int RESULT_CODE_GOTO_SETTINGS = 101;
+    public static final int RESULT_CODE_DROP_PIN = 102;
+    public static final int RESULT_CODE_UPDATE_THEME = 103;
+    private static final String DROPPED_MARKER_LAYER_ID = "DROPPED_MARKER_LAYER_ID";
     private MapView mapView;
     private AppDatabase db;
     private ThreadPoolExecutor threadPoolExecutor;
     private PermissionsManager permissionsManager;
     private MapboxMap mapboxMap;
     private LocationManager locationManager;
+    private LatLng markerLocation;
+    private Layer droppedMarkerLayer;
+    private boolean isDark;
 
     public void initThreadPool() {
         LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
@@ -83,18 +110,17 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     public void pre() {
         if (ConfigStorage.darkMode) {
+            isDark = true;
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
         } else {
+            isDark = false;
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
         }
         setContentView(R.layout.activity_main);
 
         Activity from = MainActivity.this;
         findViewById(R.id.bookmark_nav).setOnClickListener(v -> {
-            System.out.println("bookmark_nav called on Main");
-            finish();
-            startActivity(new Intent(from, BookmarkActivity.class)
-                    .addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION));
+            openBookmarks();
         });
 
         ColorMatrix matrix = new ColorMatrix();
@@ -103,9 +129,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         ((ImageView) findViewById(R.id.map_nav)).setColorFilter(filter);
 
         findViewById(R.id.setting_nav).setOnClickListener(v -> {
-            finish();
-            startActivity(new Intent(from, SettingsActivity.class)
-                    .addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION));
+            openSettings();
         });
 
         findViewById(R.id.searchBoxReal).setOnFocusChangeListener(new View.OnFocusChangeListener() {
@@ -114,10 +138,20 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 if (hasFocus) {
                     v.clearFocus();
                     startActivityForResult(new Intent(from, SearchActivity.class)
-                            .addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION), 0);
+                            .addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION), REQUEST_CODE_SEARCH);
                 }
             }
         });
+    }
+
+    private void openSettings() {
+        startActivityForResult(new Intent(this, SettingsActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION), REQUEST_CODE_SETTINGS);
+    }
+
+    private void openBookmarks() {
+        startActivityForResult(new Intent(this, BookmarkActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION), REQUEST_CODE_BOOKMARKS);
     }
 
     @Override
@@ -156,17 +190,59 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == SEARCH_REQUEST_CODE) {
+        if (resultCode == RESULT_CODE_GOTO_BOOKMARK) {
+            System.out.println("Gonna open bookmarks");
+            openBookmarks();
+        }
+        if (resultCode == RESULT_CODE_GOTO_SETTINGS)
+            openSettings();
+        if (resultCode == RESULT_CODE_UPDATE_THEME && ConfigStorage.darkMode != isDark)
+            recreate();
+        if (resultCode == RESULT_CODE_DROP_PIN) {
+            LatLng location = mapboxMap.getCameraPosition().target;
+            location.setLatitude(data.getDoubleExtra("lat", location.getLatitude()));
+            location.setLongitude(data.getDoubleExtra("lng", location.getLongitude()));
+            gotoPosition(location);
+            dropMarker(location);
+        }
+        if (requestCode == REQUEST_CODE_SEARCH) {
             if (resultCode != RESULT_OK)
                 return;
             LatLng location = mapboxMap.getCameraPosition().target;
             location.setLatitude(data.getDoubleExtra("lat", location.getLatitude()));
             location.setLongitude(data.getDoubleExtra("lng", location.getLongitude()));
             gotoPosition(location);
-            dropPin(location);
+            dropMarker(location);
             showBookmarkModal(location);
         }
         super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    private void initDroppedMarker(@NonNull Style loadedMapStyle) {
+        // Add the marker image to map
+//        loadedMapStyle.addImage("dropped-icon-image", BitmapFactory.decodeResource(
+//                getResources(), R.drawable.blue_marker));
+
+        Drawable drawable = ContextCompat.getDrawable(this, R.drawable.blue_marker);
+        assert drawable != null;
+        Bitmap bitmap = Bitmap.createBitmap(
+                drawable.getIntrinsicWidth(),
+                drawable.getIntrinsicHeight(),
+                Bitmap.Config.ARGB_8888
+        );
+        Canvas canvas = new Canvas(bitmap);
+        drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+        drawable.draw(canvas);
+        loadedMapStyle.addImage("dropped-icon-image", bitmap);
+
+        loadedMapStyle.addSource(new GeoJsonSource("dropped-marker-source-id"));
+        loadedMapStyle.addLayer(new SymbolLayer(DROPPED_MARKER_LAYER_ID,
+                "dropped-marker-source-id").withProperties(
+                iconImage("dropped-icon-image"),
+                visibility(NONE),
+                iconAllowOverlap(true),
+                iconIgnorePlacement(true)
+        ));
     }
 
     private void gotoPosition(LatLng location) {
@@ -178,10 +254,33 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 .newCameraPosition(position), 3000);
     }
 
-    private void dropPin(LatLng location) {
+    private void dropMarker(LatLng location) {
+        if (markerLocation != null)
+            clearMarker();
+
+        Style style = mapboxMap.getStyle();
+        if (style == null || style.getLayer(DROPPED_MARKER_LAYER_ID) == null)
+            return;
+        GeoJsonSource source = style.getSourceAs("dropped-marker-source-id");
+        if (source != null) {
+            source.setGeoJson(Point.fromLngLat(location.getLongitude(), location.getLatitude()));
+        }
+        droppedMarkerLayer = style.getLayer(DROPPED_MARKER_LAYER_ID);
+        if (droppedMarkerLayer != null) {
+            droppedMarkerLayer.setProperties(visibility(VISIBLE));
+        }
+        markerLocation = location;
     }
 
-    private void clearPin() {
+    private void clearMarker() {
+        Style style = mapboxMap.getStyle();
+        if (style == null || style.getLayer(DROPPED_MARKER_LAYER_ID) == null)
+            return;
+        droppedMarkerLayer = style.getLayer(DROPPED_MARKER_LAYER_ID);
+        if (droppedMarkerLayer != null) {
+            droppedMarkerLayer.setProperties(visibility(NONE));
+        }
+        markerLocation = null;
     }
 
     private void showBookmarkModal(LatLng location) {
@@ -189,7 +288,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         builder.setTitle("Add bookmark");
         builder.setMessage(String.format(
                 Locale.getDefault(),
-                "(%.2f, %.2f)",
+                "Enter the name for (%.2f, %.2f)",
                 location.getLatitude(),
                 location.getLongitude()
         ));
@@ -207,14 +306,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         location.getLongitude()
                 );
                 threadPoolExecutor.execute(() -> db.bookmarkDao().insert(bookmark));
-                clearPin();
+                clearMarker();
             }
         });
         builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 dialog.cancel();
-                clearPin();
+                clearMarker();
             }
         });
 
@@ -223,16 +322,21 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     public void onMapReady(@NonNull MapboxMap mapboxMap) {
         MainActivity.this.mapboxMap = mapboxMap;
+        mapboxMap.addOnMapClickListener(location -> {
+            clearMarker();
+            return true;
+        });
         mapboxMap.addOnMapLongClickListener(location -> {
             gotoPosition(location);
-            dropPin(location);
+            dropMarker(location);
             showBookmarkModal(location);
             return true;
         });
-        mapboxMap.setStyle(Style.MAPBOX_STREETS, new Style.OnStyleLoaded() {
+        mapboxMap.setStyle(isDark ? Style.DARK : Style.LIGHT, new Style.OnStyleLoaded() {
             @Override
             public void onStyleLoaded(@NonNull Style style) {
                 enableLocationComponent(style);
+                initDroppedMarker(style);
             }
         });
     }

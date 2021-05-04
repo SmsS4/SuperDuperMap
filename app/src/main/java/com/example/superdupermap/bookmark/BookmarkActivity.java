@@ -1,10 +1,5 @@
 package com.example.superdupermap.bookmark;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.app.AppCompatDelegate;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
@@ -15,23 +10,24 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.preference.PreferenceManager;
-import android.provider.Settings;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.widget.EditText;
+import android.view.View;
 import android.widget.ImageView;
 import android.widget.Toast;
 
-import com.example.superdupermap.MainActivity;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
 import com.example.superdupermap.MessageWhat;
 import com.example.superdupermap.R;
 import com.example.superdupermap.database.AppDatabase;
 import com.example.superdupermap.database.Bookmark;
+import com.example.superdupermap.search.RecyclerItemClickListener;
 import com.example.superdupermap.setttings.ConfigStorage;
-import com.example.superdupermap.setttings.SettingsActivity;
 import com.google.android.material.textfield.TextInputEditText;
-import com.google.android.material.textfield.TextInputLayout;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -40,39 +36,17 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import static com.example.superdupermap.MainActivity.RESULT_CODE_DROP_PIN;
+import static com.example.superdupermap.MainActivity.RESULT_CODE_GOTO_SETTINGS;
+
 public class BookmarkActivity extends AppCompatActivity {
 
+    public List<Bookmark> bookmarks = new ArrayList<>();
     ThreadPoolExecutor threadPoolExecutor;
     private Handler handler;
     private AppDatabase db;
-
     private TextInputEditText searchbar;
     private RecyclerView recyclerView;
-
-    public List<Bookmark> bookmarks = new ArrayList<>();
-
-    private static class UpdateListHandler extends Handler {
-        private final WeakReference<BookmarkActivity> target;
-
-        UpdateListHandler(Looper looper, BookmarkActivity target) {
-            super(looper);
-            this.target = new WeakReference<>(target);
-        }
-
-        @Override
-        public void handleMessage(Message msg) {
-            BookmarkActivity activity = this.target.get();
-            if (msg.what == MessageWhat.LoadBookMarks) {
-                activity.bookmarks.clear();
-                activity.bookmarks.addAll((List<Bookmark>) msg.obj);
-                System.out.println("load enghadr bookmarks:");
-                System.out.println(activity.bookmarks.size());
-                activity.recyclerView.getAdapter().notifyDataSetChanged();
-
-            }
-        }
-    }
-
 
     private void setFields() {
         db = AppDatabase.getDatabase(getApplicationContext());
@@ -80,6 +54,23 @@ public class BookmarkActivity extends AppCompatActivity {
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.setAdapter(new BookmarkAdapter(bookmarks, this));
+        recyclerView.addOnItemTouchListener(new RecyclerItemClickListener(this, recyclerView,
+                new RecyclerItemClickListener.OnItemClickListener() {
+                    @Override
+                    public void onItemClick(View view, int position) {
+                        Bookmark bookmark = bookmarks.get(position);
+                        Intent data = new Intent();
+                        data.putExtra("lat", bookmark.x);
+                        data.putExtra("lng", bookmark.y);
+                        setResult(RESULT_CODE_DROP_PIN, data);
+                        finish();
+                    }
+
+                    @Override
+                    public void onLongItemClick(View view, int position) {
+                    }
+                }
+        ));
 
         searchbar = findViewById(R.id.searchbar);
 
@@ -100,7 +91,6 @@ public class BookmarkActivity extends AppCompatActivity {
         });
 
     }
-
 
     public void deleteBookmark(Bookmark bookmark) {
         new AlertDialog.Builder(this)
@@ -142,13 +132,13 @@ public class BookmarkActivity extends AppCompatActivity {
         Activity from = BookmarkActivity.this;
         System.out.println("hmm ok");
         findViewById(R.id.map_nav).setOnClickListener(v -> {
+            setResult(RESULT_OK);
             finish();
-            startActivity(new Intent(from, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION));
         });
 
         findViewById(R.id.setting_nav).setOnClickListener(v -> {
+            setResult(RESULT_CODE_GOTO_SETTINGS);
             finish();
-            startActivity(new Intent(from, SettingsActivity.class).addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION));
         });
 
 
@@ -175,7 +165,27 @@ public class BookmarkActivity extends AppCompatActivity {
 
         /// load bookmarks
         threadPoolExecutor.execute(new BookmarkLoader(handler, db, null));
+    }
 
+    private static class UpdateListHandler extends Handler {
+        private final WeakReference<BookmarkActivity> target;
 
+        UpdateListHandler(Looper looper, BookmarkActivity target) {
+            super(looper);
+            this.target = new WeakReference<>(target);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            BookmarkActivity activity = this.target.get();
+            if (msg.what == MessageWhat.LoadBookMarks) {
+                activity.bookmarks.clear();
+                activity.bookmarks.addAll((List<Bookmark>) msg.obj);
+                System.out.println("load enghadr bookmarks:");
+                System.out.println(activity.bookmarks.size());
+                activity.recyclerView.getAdapter().notifyDataSetChanged();
+
+            }
+        }
     }
 }
