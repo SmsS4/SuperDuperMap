@@ -4,4 +4,6 @@
     <color name="primary">#ff212121</color>
     <color name="primary_dark">#ff000000</color>
     <color name="accent">#ff80cbc4</color>
+    <color name="nav_back">#45454F</color>
+
 </resources>

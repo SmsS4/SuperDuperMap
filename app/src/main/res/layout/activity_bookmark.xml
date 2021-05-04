@@ -6,24 +6,6 @@
     android:layout_height="match_parent"
     tools:context=".bookmark.BookmarkActivity">
 
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottomNavigationViewBookmark"
-        android:layout_width="match_parent"
-        android:layout_height="70dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        >
-
-        <include  layout="@layout/bottom_nav_menu"
-            android:id="@+id/id"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginLeft="2sp"
-            android:layout_marginRight="2sp"
-            />
-
-    </com.google.android.material.bottomnavigation.BottomNavigationView>
-
     <!--    <EditText-->
 <!--        android:id="@+id/searchbar"-->
 <!--        android:layout_width="match_parent"-->
@@ -40,27 +22,49 @@
 <!--        app:tint="?android:attr/textColorPrimaryInverse"-->
 <!--    />-->
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recycler_view"
-        android:layout_width="341dp"
-        android:layout_height="559dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textInputLayout"
-        app:tint="?android:attr/textColorPrimaryInverse" />
-
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/textInputLayout"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
         app:layout_constraintTop_toTopOf="parent"
-        tools:layout_editor_absoluteX="99dp">
+        android:layout_marginBottom="70dp"
+        tools:layout_editor_absoluteX="139dp">
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/searchbar"
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/textInputLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/search" />
-    </com.google.android.material.textfield.TextInputLayout>
+            android:background="@android:color/transparent"
+
+
+            android:padding="10dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/searchbar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bottom_navigation_background"
+                android:hint="@string/search" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycler_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="10dp"
+            android:padding="10dp"
+            app:tint="?android:attr/textColorPrimaryInverse" />
+
+
+
+    </LinearLayout>
+
+    <include
+        android:id="@+id/id"
+        layout="@layout/bottom_nav_menu"
+        android:layout_width="match_parent"
+        android:layout_height="70dp"
+        android:layout_weight="1"
+        app:layout_constraintBottom_toBottomOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
