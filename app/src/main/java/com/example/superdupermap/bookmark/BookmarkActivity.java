@@ -133,21 +133,14 @@ public class BookmarkActivity extends AppCompatActivity {
     }
 
     public void pre() {
-        System.out.println("Pre called");
         if (ConfigStorage.darkMode) {
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
         } else {
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
         }
         setContentView(R.layout.activity_bookmark);
-
         Activity from = BookmarkActivity.this;
-
-        ColorMatrix matrix = new ColorMatrix();
-        matrix.setSaturation(0);
-        ColorMatrixColorFilter filter = new ColorMatrixColorFilter(matrix);
-        ((ImageView) findViewById(R.id.bookmark_nav)).setColorFilter(filter);
-
+        System.out.println("hmm ok");
         findViewById(R.id.map_nav).setOnClickListener(v -> {
             finish();
             startActivity(new Intent(from, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION));
@@ -157,6 +150,12 @@ public class BookmarkActivity extends AppCompatActivity {
             finish();
             startActivity(new Intent(from, SettingsActivity.class).addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION));
         });
+
+
+        ColorMatrix matrix = new ColorMatrix();
+        matrix.setSaturation(0);
+        ColorMatrixColorFilter filter = new ColorMatrixColorFilter(matrix);
+        ((ImageView) findViewById(R.id.bookmark_nav)).setColorFilter(filter);
     }
 
     @Override
