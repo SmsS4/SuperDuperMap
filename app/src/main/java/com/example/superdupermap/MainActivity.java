@@ -17,6 +17,8 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
@@ -68,7 +70,13 @@ import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconImage;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.visibility;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, PermissionsListener {
-    private static final int SEARCH_REQUEST_CODE = 0;
+    public static final int REQUEST_CODE_SEARCH = 0;
+    public static final int REQUEST_CODE_SETTINGS = 1;
+    public static final int REQUEST_CODE_BOOKMARKS = 2;
+    public static final int RESULT_CODE_GOTO_BOOKMARK = 100;
+    public static final int RESULT_CODE_GOTO_SETTINGS = 101;
+    public static final int RESULT_CODE_DROP_PIN = 102;
+    public static final int RESULT_CODE_UPDATE_THEME = 103;
     private static final String DROPPED_MARKER_LAYER_ID = "DROPPED_MARKER_LAYER_ID";
     private MapView mapView;
     private AppDatabase db;
@@ -78,6 +86,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private LocationManager locationManager;
     private LatLng markerLocation;
     private Layer droppedMarkerLayer;
+    private boolean isDark;
 
     public void initThreadPool() {
         LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
@@ -101,18 +110,17 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     public void pre() {
         if (ConfigStorage.darkMode) {
+            isDark = true;
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
         } else {
+            isDark = false;
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
         }
         setContentView(R.layout.activity_main);
 
         Activity from = MainActivity.this;
         findViewById(R.id.bookmark_nav).setOnClickListener(v -> {
-            System.out.println("bookmark_nav called on Main");
-            finish();
-            startActivity(new Intent(from, BookmarkActivity.class)
-                    .addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION));
+            openBookmarks();
         });
 
         ColorMatrix matrix = new ColorMatrix();
@@ -121,9 +129,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         ((ImageView) findViewById(R.id.map_nav)).setColorFilter(filter);
 
         findViewById(R.id.setting_nav).setOnClickListener(v -> {
-            finish();
-            startActivity(new Intent(from, SettingsActivity.class)
-                    .addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION));
+            openSettings();
         });
 
         findViewById(R.id.searchBoxReal).setOnFocusChangeListener(new View.OnFocusChangeListener() {
@@ -132,10 +138,20 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 if (hasFocus) {
                     v.clearFocus();
                     startActivityForResult(new Intent(from, SearchActivity.class)
-                            .addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION), 0);
+                            .addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION), REQUEST_CODE_SEARCH);
                 }
             }
         });
+    }
+
+    private void openSettings() {
+        startActivityForResult(new Intent(this, SettingsActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION), REQUEST_CODE_SETTINGS);
+    }
+
+    private void openBookmarks() {
+        startActivityForResult(new Intent(this, BookmarkActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION), REQUEST_CODE_BOOKMARKS);
     }
 
     @Override
@@ -174,7 +190,22 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == SEARCH_REQUEST_CODE) {
+        if (resultCode == RESULT_CODE_GOTO_BOOKMARK) {
+            System.out.println("Gonna open bookmarks");
+            openBookmarks();
+        }
+        if (resultCode == RESULT_CODE_GOTO_SETTINGS)
+            openSettings();
+        if (resultCode == RESULT_CODE_UPDATE_THEME && ConfigStorage.darkMode != isDark)
+            recreate();
+        if (resultCode == RESULT_CODE_DROP_PIN) {
+            LatLng location = mapboxMap.getCameraPosition().target;
+            location.setLatitude(data.getDoubleExtra("lat", location.getLatitude()));
+            location.setLongitude(data.getDoubleExtra("lng", location.getLongitude()));
+            gotoPosition(location);
+            dropMarker(location);
+        }
+        if (requestCode == REQUEST_CODE_SEARCH) {
             if (resultCode != RESULT_OK)
                 return;
             LatLng location = mapboxMap.getCameraPosition().target;
@@ -257,7 +288,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         builder.setTitle("Add bookmark");
         builder.setMessage(String.format(
                 Locale.getDefault(),
-                "(%.2f, %.2f)",
+                "Enter the name for (%.2f, %.2f)",
                 location.getLatitude(),
                 location.getLongitude()
         ));
@@ -291,13 +322,17 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     public void onMapReady(@NonNull MapboxMap mapboxMap) {
         MainActivity.this.mapboxMap = mapboxMap;
+        mapboxMap.addOnMapClickListener(location -> {
+            clearMarker();
+            return true;
+        });
         mapboxMap.addOnMapLongClickListener(location -> {
             gotoPosition(location);
             dropMarker(location);
             showBookmarkModal(location);
             return true;
         });
-        mapboxMap.setStyle(Style.MAPBOX_STREETS, new Style.OnStyleLoaded() {
+        mapboxMap.setStyle(isDark ? Style.DARK : Style.LIGHT, new Style.OnStyleLoaded() {
             @Override
             public void onStyleLoaded(@NonNull Style style) {
                 enableLocationComponent(style);

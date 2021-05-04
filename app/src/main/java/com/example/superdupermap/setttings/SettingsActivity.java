@@ -1,39 +1,34 @@
 package com.example.superdupermap.setttings;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.app.AppCompatDelegate;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.ProgressBar;
 import android.widget.Switch;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 
-import com.example.superdupermap.MainActivity;
 import com.example.superdupermap.R;
-import com.example.superdupermap.bookmark.BookmarkActivity;
 import com.example.superdupermap.database.AppDatabase;
 
-import java.time.LocalDateTime;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
+
+import static com.example.superdupermap.MainActivity.RESULT_CODE_GOTO_BOOKMARK;
+import static com.example.superdupermap.MainActivity.RESULT_CODE_UPDATE_THEME;
 
 
 public class SettingsActivity extends AppCompatActivity {
 
-    private AppDatabase db;
     ThreadPoolExecutor threadPoolExecutor;
+    private AppDatabase db;
 
     public void initFields() {
         LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
@@ -78,9 +73,7 @@ public class SettingsActivity extends AppCompatActivity {
                         threadPoolExecutor.execute(() -> db.configDao().setDarkMode(false));
                         ConfigStorage.darkMode = false;
                     }
-                    startActivity(new Intent(SettingsActivity.this, SettingsActivity.class).addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION));
-                    finish();
-
+                    recreate();
                 }
         );
 
@@ -95,13 +88,13 @@ public class SettingsActivity extends AppCompatActivity {
         setContentView(R.layout.activity_settings2);
         Activity from = SettingsActivity.this;
         findViewById(R.id.bookmark_nav).setOnClickListener(v -> {
+            setResult(RESULT_CODE_GOTO_BOOKMARK);
             finish();
-            startActivity(new Intent(from, BookmarkActivity.class).addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION));
         });
 
         findViewById(R.id.map_nav).setOnClickListener(v -> {
+            setResult(RESULT_CODE_UPDATE_THEME);
             finish();
-            startActivity(new Intent(from, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION));
         });
 
         ColorMatrix matrix = new ColorMatrix();
@@ -111,13 +104,17 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     @Override
+    public void onBackPressed() {
+        setResult(RESULT_CODE_UPDATE_THEME);
+        finish();
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         pre();
         initFields();
         setClearStorage();
         activitySetDarkMode();
-
-
     }
 }

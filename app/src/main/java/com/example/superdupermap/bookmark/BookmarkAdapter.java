@@ -16,8 +16,8 @@ import java.util.List;
 
 public class BookmarkAdapter extends RecyclerView.Adapter<BookmarkAdapter.ViewHolder> {
 
-    private List<Bookmark> localDataSet;
-    private WeakReference<BookmarkActivity> target;
+    private final List<Bookmark> localDataSet;
+    private final WeakReference<BookmarkActivity> target;
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         private final TextView name;
