@@ -110,6 +110,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     public void pre() {
         if (ConfigStorage.darkMode) {
+            System.out.println("darke ke");
             isDark = true;
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
         } else {
@@ -153,13 +154,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         startActivityForResult(new Intent(this, BookmarkActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION), REQUEST_CODE_BOOKMARKS);
     }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         initThreadPool();
         Mapbox.getInstance(this, getString(R.string.mapbox_access_token));
-
         pre();
 
         mapView = (MapView) findViewById(R.id.mapView);
@@ -199,6 +199,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (resultCode == RESULT_CODE_UPDATE_THEME && ConfigStorage.darkMode != isDark)
             recreate();
         if (resultCode == RESULT_CODE_DROP_PIN) {
+            System.out.println("deb");
+            System.out.println(mapboxMap);
+            System.out.println(mapboxMap.getCameraPosition());
             LatLng location = mapboxMap.getCameraPosition().target;
             location.setLatitude(data.getDoubleExtra("lat", location.getLatitude()));
             location.setLongitude(data.getDoubleExtra("lng", location.getLongitude()));
@@ -321,6 +324,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     public void onMapReady(@NonNull MapboxMap mapboxMap) {
+        System.out.println("Map ready");
         MainActivity.this.mapboxMap = mapboxMap;
         mapboxMap.addOnMapClickListener(location -> {
             clearMarker();

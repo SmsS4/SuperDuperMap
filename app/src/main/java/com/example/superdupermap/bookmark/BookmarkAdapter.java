@@ -28,6 +28,12 @@ public class BookmarkAdapter extends RecyclerView.Adapter<BookmarkAdapter.ViewHo
             super(view);
             this.bookmarkAdapter = bookmarkAdapter;
             name = (TextView) view.findViewById(R.id.name);
+            name.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    bookmarkAdapter.target.get().gotoBookmark(localDataSet.get(getLayoutPosition()));
+                }
+            });
             imageView = (ImageView) view.findViewById(R.id.delete);
             imageView.setOnClickListener(new View.OnClickListener() {
                 @Override

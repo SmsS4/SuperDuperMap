@@ -47,30 +47,39 @@ public class BookmarkActivity extends AppCompatActivity {
     private AppDatabase db;
     private TextInputEditText searchbar;
     private RecyclerView recyclerView;
-
+    public void gotoBookmark(Bookmark bookmark){
+        System.out.println("hey");
+        System.out.println(bookmark.x);
+        System.out.println(bookmark.y);
+        Intent data = new Intent();
+        data.putExtra("lat", bookmark.x);
+        data.putExtra("lng", bookmark.y);
+        setResult(RESULT_CODE_DROP_PIN, data);
+        finish();
+    }
     private void setFields() {
         db = AppDatabase.getDatabase(getApplicationContext());
         recyclerView = findViewById(R.id.recycler_view);
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.setAdapter(new BookmarkAdapter(bookmarks, this));
-        recyclerView.addOnItemTouchListener(new RecyclerItemClickListener(this, recyclerView,
-                new RecyclerItemClickListener.OnItemClickListener() {
-                    @Override
-                    public void onItemClick(View view, int position) {
-                        Bookmark bookmark = bookmarks.get(position);
-                        Intent data = new Intent();
-                        data.putExtra("lat", bookmark.x);
-                        data.putExtra("lng", bookmark.y);
-                        setResult(RESULT_CODE_DROP_PIN, data);
-                        finish();
-                    }
-
-                    @Override
-                    public void onLongItemClick(View view, int position) {
-                    }
-                }
-        ));
+//        recyclerView.addOnItemTouchListener(new RecyclerItemClickListener(this, recyclerView,
+//                new RecyclerItemClickListener.OnItemClickListener() {
+//                    @Override
+//                    public void onItemClick(View view, int position) {
+//                        Bookmark bookmark = bookmarks.get(position);
+//                        Intent data = new Intent();
+//                        data.putExtra("lat", bookmark.x);
+//                        data.putExtra("lng", bookmark.y);
+//                        setResult(RESULT_CODE_DROP_PIN, data);
+//                        finish();
+//                    }
+//
+//                    @Override
+//                    public void onLongItemClick(View view, int position) {
+//                    }
+//                }
+//        ));
 
         searchbar = findViewById(R.id.searchbar);
 
