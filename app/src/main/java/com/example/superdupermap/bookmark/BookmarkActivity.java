@@ -12,7 +12,6 @@ import android.os.Looper;
 import android.os.Message;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.view.View;
 import android.widget.ImageView;
 import android.widget.Toast;
 
@@ -25,7 +24,6 @@ import com.example.superdupermap.MessageWhat;
 import com.example.superdupermap.R;
 import com.example.superdupermap.database.AppDatabase;
 import com.example.superdupermap.database.Bookmark;
-import com.example.superdupermap.search.RecyclerItemClickListener;
 import com.example.superdupermap.setttings.ConfigStorage;
 import com.google.android.material.textfield.TextInputEditText;
 
@@ -47,7 +45,8 @@ public class BookmarkActivity extends AppCompatActivity {
     private AppDatabase db;
     private TextInputEditText searchbar;
     private RecyclerView recyclerView;
-    public void gotoBookmark(Bookmark bookmark){
+
+    public void gotoBookmark(Bookmark bookmark) {
         System.out.println("hey");
         System.out.println(bookmark.x);
         System.out.println(bookmark.y);
@@ -57,6 +56,7 @@ public class BookmarkActivity extends AppCompatActivity {
         setResult(RESULT_CODE_DROP_PIN, data);
         finish();
     }
+
     private void setFields() {
         db = AppDatabase.getDatabase(getApplicationContext());
         recyclerView = findViewById(R.id.recycler_view);

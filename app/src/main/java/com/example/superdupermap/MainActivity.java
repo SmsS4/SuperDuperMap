@@ -17,8 +17,6 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.View;
-import android.view.Window;
-import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
@@ -59,6 +57,7 @@ import com.mapbox.mapboxsdk.style.sources.GeoJsonSource;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -87,6 +86,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private LatLng markerLocation;
     private Layer droppedMarkerLayer;
     private boolean isDark;
+    private Semaphore mapLoaded;
 
     public void initThreadPool() {
         LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
@@ -154,6 +154,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         startActivityForResult(new Intent(this, BookmarkActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION), REQUEST_CODE_BOOKMARKS);
     }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -161,6 +162,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         initThreadPool();
         Mapbox.getInstance(this, getString(R.string.mapbox_access_token));
         pre();
+        mapLoaded = new Semaphore(0);
 
         mapView = (MapView) findViewById(R.id.mapView);
         mapView.onCreate(savedInstanceState);
@@ -180,10 +182,18 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     // for ActivityCompat#requestPermissions for more details.
                     return;
                 }
-                Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                double latitude = location.getLatitude(),
-                        longitude = location.getLongitude();
-                gotoPosition(new LatLng(latitude, longitude));
+                try {
+                    Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                    double latitude = location.getLatitude(),
+                            longitude = location.getLongitude();
+                    gotoPosition(new LatLng(latitude, longitude));
+                } catch (Exception e) {
+                    Toast.makeText(
+                            MainActivity.this,
+                            "Faulty location service",
+                            Toast.LENGTH_SHORT
+                    ).show();
+                }
             }
         });
     }
@@ -199,10 +209,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (resultCode == RESULT_CODE_UPDATE_THEME && ConfigStorage.darkMode != isDark)
             recreate();
         if (resultCode == RESULT_CODE_DROP_PIN) {
-            System.out.println("deb");
-            System.out.println(mapboxMap);
-            System.out.println(mapboxMap.getCameraPosition());
-            LatLng location = mapboxMap.getCameraPosition().target;
+            LatLng location = new LatLng(0, 0);
             location.setLatitude(data.getDoubleExtra("lat", location.getLatitude()));
             location.setLongitude(data.getDoubleExtra("lng", location.getLongitude()));
             gotoPosition(location);
@@ -249,12 +256,18 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void gotoPosition(LatLng location) {
+        try {
+            mapLoaded.acquire();
+        } catch (InterruptedException e) {
+            return;
+        }
         CameraPosition position = new CameraPosition.Builder()
                 .target(location)
                 .zoom(15)
                 .build();
         mapboxMap.animateCamera(CameraUpdateFactory
                 .newCameraPosition(position), 3000);
+        mapLoaded.release();
     }
 
     private void dropMarker(LatLng location) {
@@ -343,6 +356,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 initDroppedMarker(style);
             }
         });
+        mapLoaded.release();
     }
 
     @SuppressWarnings({"MissingPermission"})

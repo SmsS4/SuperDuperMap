@@ -72,8 +72,8 @@ public class SearchActivity extends AppCompatActivity {
             Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                     RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-            /// remove this lint for english
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fa");
+            // uncomment this lint for farsi
+//            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fa");
 
             startActivityForResult(intent, SPEECH_REQUEST_CODE);
         });
@@ -125,6 +125,7 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     private void searchPattern(String pattern) {
+        System.out.println("SEARCHING " + pattern);
         if (pattern.length() == 0) {
             setChoices(new ArrayList<>(), pattern);
             return;
@@ -141,6 +142,7 @@ public class SearchActivity extends AppCompatActivity {
                 assert response.body() != null;
                 List<CarmenFeature> carmenFeatures = response.body().features();
                 ArrayList<SearchResult> results = new ArrayList<>();
+                System.out.println("YYYEEEEEESSS");
                 for (CarmenFeature cf : carmenFeatures) {
                     Point center = cf.center();
                     assert center != null;
@@ -148,6 +150,7 @@ public class SearchActivity extends AppCompatActivity {
                     LatLng location;
                     location = new LatLng(center.latitude(), center.longitude());
                     results.add(new SearchResult(cf.placeName(), location));
+                    System.out.println(cf.placeName());
                 }
                 setChoices(results, pattern);
             }
